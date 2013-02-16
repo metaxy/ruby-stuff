@@ -1,6 +1,5 @@
  require 'optparse'
  require 'net/ftp'
-
  # This hash will hold all of the options
  # parsed from the command-line by
  # OptionParser.
@@ -59,38 +58,29 @@
 optparse.parse!
 
 def changeDir(dir)
-    if FileTest::directory?(dir)
-        return
+    if not FileTest::directory?(dir)
+        Dir::mkdir(dir)
     end
-    Dir::mkdir(dir)
     Dir.chdir dir
 end
-def downloadR()
-    files = $ftp.list('*')
+def downloadR(folder)
+    puts "downloading from" + folder
+    files = $ftp.nlst()
     files.each do |f|
-        fileName = f.split(/\s+/).last
-        if(f[0, 1] == "d")
-            $ftp.chdir(fileName)
-            changeDir(fileName)
-            downloadR()
-        else
+        begin
+            $ftp.chdir(f)
+            changeDir(f)
+            downloadR(folder + "/" + f)
+        rescue
             ok = true;
             if(not $options[:exclude].empty?)
-                 if(not fileName =~ /#{$options[:exclude]}$/ )
-                     ok = true
-                 else
-                     ok = false
-                 end
-           elsif(not $options[:include].empty?)
-                 if(fileName =~ /#{$options[:include]}$/ )
-                     ok = true
-                 else
-                     ok = false
-                 end
+                ok = not f =~ /#{$options[:exclude]}$/ 
+            elsif(not $options[:include].empty?)
+                ok = f =~ /#{$options[:include]}$/
             end
-            if ok
-                puts "downloading " + fileName; 
-                $ftp.getbinaryfile(fileName)
+            if ok and not FileTest::exist?(f)
+                puts "downloading " + f; 
+                $ftp.getbinaryfile(f)
             end
         end
     end
@@ -115,7 +105,7 @@ def main()
     $ftp.passive = true
     $ftp.login($options[:username],$options[:password])
     $ftp.chdir($options[:path])
-    downloadR();
+    downloadR($options[:path]);
     $ftp.close
 
 end
