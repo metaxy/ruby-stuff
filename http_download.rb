@@ -6,7 +6,7 @@ require 'cgi'
 require 'optparse'
 
 def main()
-    url = ""
+    url = nil
     path = "./"
     optparse = OptionParser.new do|opts|
         opts.banner = "Usage: download_http.rb [options]"
@@ -21,6 +21,10 @@ def main()
             exit
         end
     end.parse!
+    if url.nil?
+        puts "missing --url"
+        exit
+    end
     scan(url, path); 
 end
 
@@ -36,6 +40,7 @@ def scan(url, path)
     l.each do |link|
         next if link.start_with? "/"
         next if link.start_with? "?"
+        next if link.start_with? ".."
         if(is_file? link) 
             download_file(url+link,path+CGI::unescape(link)) 
         else
